@@ -1,21 +1,22 @@
 import scrapy
+import json
+import pandas as pd
+
+class NbaStatsLog(scrapy.Spider):
+	name = 'nbagames'
+	games_url = 'https://stats.nba.com/stats/scoreboardv2/?leagueId=00&gameDate=03%2F10%2F2019&dayOffset=0'
+	download_delay = 2
+	headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36'}
+
+	def start_requests(self):
+		yield scrapy.Request(self.games_url, headers=self.headers)
 
 
-class NbaStatsScraper(scrapy.Spider):
-    name = "nba_stats"
-
-    def start_requests(self):
-        urls = [
-            'http://www.espn.com.au/nba/scoreboard/_/date/20190304',
-        ]
-        for url in urls:
-            yield scrapy.Request(url=url, callback=self.parse)
-
-    def parse(self, response):
-        # boxscores = response.selector.css("a").xpath("@href").getall()
-        # /a[contains(@class, "button-alt sm")]
-        boxscores = response.selector.xpath("//*[@class='button-alt sm']/@href").getall()
-        stat_links = [link for link in boxscores]
-        # stat_links = response.xpath("//*[@id='401071617']/div/section/a[2]")
-        print(stat_links)
-        
+	def parse(self, response):
+		data = json.loads(response.body)
+		header = data['resultSets'][0]
+		line_score = data['resultSets'][1]
+		header_df = pd.DataFrame(columns=header['headers'], data=header['rowSet'])
+		header_df.to_csv('day_games_10th.csv')
+		linescores_df = pd.DataFrame(columns=line_score['headers'], data=line_score['rowSet'])
+		linescores_df.to_csv('linescores_10th.csv')
